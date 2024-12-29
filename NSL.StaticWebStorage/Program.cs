@@ -1,10 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
-using NSL.Utils;
 using NSL.WCS.Client;
-using System.IO;
-using System.Net.Http.Headers;
 
 namespace NSL.StaticWebStorage
 {
