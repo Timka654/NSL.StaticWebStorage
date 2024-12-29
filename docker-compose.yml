@@ -1,0 +1,6 @@
+services:
+  nsl.staticwebstorage:
+    image: ${DOCKER_REGISTRY-}nslstaticwebstorage
+    build:
+      context: .
+      dockerfile: NSL.StaticWebStorage/Dockerfile
