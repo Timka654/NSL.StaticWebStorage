@@ -1,16 +1,17 @@
 ﻿using Microsoft.AspNetCore.Connections;
 using NSL.Utils;
+using NSL.WCS.Shared.Models;
 using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Security.Cryptography.X509Certificates;
 
-namespace NSL.StaticWebStorage
+namespace NSL.StaticWebStorage.Utils
 {
     internal class CertificateStorage
     {
         const bool CanDefault = true;
 
-        const string CertStoragePath = "certs/";
+        const string CertStoragePath = "data/certs/";
 
         static string CertStorageFullPath => Path.GetFullPath(CertStoragePath);
 
@@ -49,7 +50,10 @@ namespace NSL.StaticWebStorage
                 defaultCert = loadCertificate(DefaultCertPath, false);
             }
 
-            certStorageWatch = new FSWatcher(CertStorageFullPath, "*.zip", onAnyChanges: OnCertChanged);
+            certStorageWatch = new FSWatcher(() => new FileSystemWatcher(CertStorageFullPath, "*.zip") { IncludeSubdirectories = true })
+            {
+                OnAnyChanges = OnCertChanged
+            };
         }
 
         static X509Certificate2? loadCertificate(string path, bool add)
@@ -189,5 +193,21 @@ namespace NSL.StaticWebStorage
             using var reader = new StreamReader(stream);
             return reader.ReadToEnd();
         }
+    }
+
+    public static class RouteExtensions
+    {
+        public static ProxyRouteDataModel ToProxyRoute(this string domain)
+            => new ProxyRouteDataModel()
+            {
+                Name = domain,
+                MatchHosts = new List<string>() { domain },
+                Destinations = new List<ProxyRouteDestinationDataModel>() {
+                            new ProxyRouteDestinationDataModel() {
+                                Name = domain,
+                                Address = "http://@@container_name:5000"
+                            }
+                        }
+            };
     }
 }

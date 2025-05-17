@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
+using NSL.StaticWebStorage.Models;
 
-namespace NSL.StaticWebStorage
+namespace NSL.StaticWebStorage.Utils.Route
 {
     public class DomainRoutingMiddleware
     {
@@ -17,8 +18,7 @@ namespace NSL.StaticWebStorage
         {
             var host = context.Request.Host.Host;
 
-            if (configuration.Value.Domains.ContainsKey(host))
-                context.Request.Path = $"/{host}/storage{context.Request.Path}";
+            context.Request.Path = $"/{host}{context.Request.Path}";
 
             //$"/{item.Key}/storage"
             //if (host == "domain1.com")
