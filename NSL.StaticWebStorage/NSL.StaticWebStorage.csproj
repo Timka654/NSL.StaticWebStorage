@@ -15,8 +15,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
-		<PackageReference Include="NSL.ASPNET" Version="2025.5.17.2010" />
-		<PackageReference Include="NSL.Utils" Version="2025.5.17.2010" />
+		<PackageReference Include="NSL.ASPNET" Version="2025.5.19.1745" />
+		<PackageReference Include="NSL.Utils" Version="2025.5.19.1745" />
 		<PackageReference Include="NSL.WCS.Client" Version="2025.1.25.1852" />
 	</ItemGroup>
 

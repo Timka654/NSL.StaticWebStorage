@@ -1,15 +1,21 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NSL.StaticWebStorage.Services;
 using NSL.StaticWebStorage.Utils.Route;
+using System.IO;
+using System.IO.Compression;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
 namespace NSL.StaticWebStorage.Controllers
 {
-    [TokenAccessFilter()]
-    public class FilesController : Controller
+    public class FilesController(StoragesService storagesService) : ControllerBase
     {
-        [TokenAccessFilter(canDownload: true)]
-        [HttpGet("/{storage}/download/{path}")]
-        public IActionResult Download([FromQuery] string storage, [FromQuery] string path)
+        [TokenAccessFilter(downloadCheck: true)]
+        [HttpGet("/{storage}/download/{*path}")]
+        public IActionResult Download([FromRoute] string storage, [FromRoute] string path)
         {
+            storage = storage.Trim().ToLower();
+
             var epath = Path.Combine("data", "storage", storage, path);
 
             if (!System.IO.File.Exists(epath))
@@ -18,49 +24,69 @@ namespace NSL.StaticWebStorage.Controllers
             return File(System.IO.File.OpenRead(epath), "application/octet-stream", Path.GetFileName(epath));
         }
 
-        [TokenAccessFilter(canUpload: true)]
-        [HttpPost("/{storage}/upload/{path}")]
-        public IActionResult Upload([FromQuery] string storage, [FromQuery] string path, IFormFile file)
+        [TokenAccessFilter(uploadCheck: true)]
+        [HttpPost("/{storage}/delete/{*path}")]
+        public IActionResult Delete([FromRoute] string storage, [FromRoute] string path)
         {
+            storage = storage.Trim().ToLower();
+
             var epath = Path.Combine("data", "storage", storage, path);
 
-            if (!Directory.Exists(Path.GetDirectoryName(epath)))
-                Directory.CreateDirectory(Path.GetDirectoryName(epath)!);
+            if (!System.IO.File.Exists(epath))
+                return NotFound();
 
-            using (var stream = System.IO.File.Create(epath))
-            {
-                file.CopyTo(stream);
-            }
+            System.IO.File.Delete(epath);
 
             return Ok();
         }
 
-        [TokenAccessFilter(canShareAccess: true)]
-        [HttpPost("/{storage}/share/{path}")]
-        public IActionResult ShareAccess([FromQuery] string storage, [FromQuery] string path, IFormFile file)
+        [TokenAccessFilter(uploadCheck: true)]
+        [HttpPost("/{storage}/upload/{*path}")]
+        public async Task<IActionResult> Upload([FromRoute] string storage
+            , [FromRoute] string path
+            , [FromHeader(Name = "upload-type")] string? uploadType
+            , [FromForm] IFormFile file)
         {
-            return View();
-        }
+            storage = storage.Trim().ToLower();
 
-        [TokenAccessFilter(canShareAccess: true)]
-        [HttpPost("/{storage}/share")]
-        public IActionResult ShareAccess([FromQuery] string storage)
-        {
-            return View();
-        }
+            var fullUploadPath = Path.Combine("data", "storage", storage, path);
 
-        [TokenAccessFilter(canShareAccess: true)]
-        [HttpPost("/{storage}/recall/{path}")]
-        public IActionResult Recall([FromQuery] string storage, [FromQuery] string path, IFormFile file)
-        {
-            return View();
-        }
+            using var uf = file.OpenReadStream();
 
-        [TokenAccessFilter(canShareAccess: true)]
-        [HttpPost("/{storage}/recall")]
-        public IActionResult Recall([FromQuery] string storage, IFormFile file)
-        {
-            return View();
+            if (uploadType == default)
+            {
+                var ufi = new FileInfo(fullUploadPath);
+
+                if (!ufi.Directory.Exists)
+                    ufi.Directory.Create();
+
+                using var f = ufi.Create();
+
+                await uf.CopyToAsync(f);
+            }
+            else if (uploadType == "extract")
+            {
+                using ZipArchive za = new ZipArchive(uf, ZipArchiveMode.Read);
+
+                foreach (var f in za.Entries)
+                {
+                    if (string.IsNullOrEmpty(f.Name)) //folder
+                        continue;
+
+                    var filePath = Path.Combine(fullUploadPath, f.FullName);
+
+                    var dirPath = Path.GetDirectoryName(filePath);
+
+                    if (!Directory.Exists(dirPath))
+                        Directory.CreateDirectory(dirPath);
+
+                    f.ExtractToFile(filePath, true);
+                }
+            }
+            else
+                return BadRequest($"invalid upload type - {uploadType}");
+
+            return Ok();
         }
     }
 }

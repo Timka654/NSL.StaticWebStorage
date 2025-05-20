@@ -70,11 +70,13 @@ namespace NSL.StaticWebStorage
 
         static WebApplication buildApplication(string[] args)
         {
-
             var builder = WebApplication.CreateBuilder(args);
 
             //#if RELEASE
             builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+            if (args.Contains("development"))
+                builder.Configuration.AddJsonFile("appsettings.Development.json", optional: false, reloadOnChange: true);
             //#endif
 
             builder.WebHost.ConfigureKestrel(options =>
@@ -135,28 +137,10 @@ namespace NSL.StaticWebStorage
             if (storageOptions.CurrentValue.Model == StaticStorageModelEnum.Domains)
                 app.UseMiddleware<DomainRoutingMiddleware>();
 
-            app.UseRouting();
 
-            app.UseMvc();
-
-            //if (storageOptions.CurrentValue.HaveBaseRoute)
-            //{
-            //    app.UseFileServer(ConfigureFileServer(new FileServerOptions()
-            //    {
-            //        EnableDirectoryBrowsing = true,
-            //        FileProvider = new PhysicalFileProvider(Path.GetFullPath("wwwroot")),
-            //    }, null));
-            //}
+            app.MapControllers();
 
             return app;
-        }
-
-        static FileServerOptions ConfigureFileServer(FileServerOptions options, string? domainPath)
-        {
-            options.StaticFileOptions.ServeUnknownFileTypes = true;
-            options.StaticFileOptions.DefaultContentType = "application/octet-stream";
-
-            return options;
         }
     }
 }

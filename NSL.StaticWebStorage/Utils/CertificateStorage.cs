@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Connections;
+using Microsoft.Extensions.Options;
 using NSL.Utils;
 using NSL.WCS.Shared.Models;
 using System.Collections.Concurrent;
@@ -9,11 +10,11 @@ namespace NSL.StaticWebStorage.Utils
 {
     internal class CertificateStorage
     {
-        const bool CanDefault = true;
+        static IOptionsMonitor<CertificateConfigurationModel>? Configuration { get; set; }
 
-        const string CertStoragePath = "data/certs/";
+        static IDisposable? ChangeEvent { get; set; }
 
-        static string CertStorageFullPath => Path.GetFullPath(CertStoragePath);
+        static string CertStorageFullPath => Path.GetFullPath(Configuration.CurrentValue.CertStoragePath);
 
         static ConcurrentDictionary<string, X509Certificate2> loadedCerts;
 
@@ -28,11 +29,36 @@ namespace NSL.StaticWebStorage.Utils
 
         static ILogger? logger;
 
+        public static void Configure(IServiceCollection services, CertificateConfigurationModel configuration)
+        {
+            services.Configure<CertificateConfigurationModel>(c =>
+            {
+                c.CanDefault = configuration.CanDefault;
+                c.CertStoragePath = configuration.CertStoragePath;
+            });
+        }
+
         public static void Load(WebApplication app)
         {
             logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("CertificateStorage");
 
             loadedCerts = new ConcurrentDictionary<string, X509Certificate2>();
+
+            Configuration = app.Services.GetRequiredService<IOptionsMonitor<CertificateConfigurationModel>>();
+
+            loadCerts();
+        }
+
+        static void loadCerts()
+        {
+            ChangeEvent = Configuration.OnChange((config) =>
+            {
+                ChangeEvent?.Dispose();
+                certStorageWatch?.Dispose();
+                certStorageWatch = null;
+
+                loadCerts();
+            });
 
             if (!Directory.Exists(CertStorageFullPath))
                 Directory.CreateDirectory(CertStorageFullPath);
@@ -45,7 +71,7 @@ namespace NSL.StaticWebStorage.Utils
                 loadCertificate(item, true);
             }
 
-            if (CanDefault && File.Exists(DefaultCertPath))
+            if (Configuration.CurrentValue.CanDefault && File.Exists(DefaultCertPath))
             {
                 defaultCert = loadCertificate(DefaultCertPath, false);
             }
@@ -55,6 +81,7 @@ namespace NSL.StaticWebStorage.Utils
                 OnAnyChanges = OnCertChanged
             };
         }
+
 
         static X509Certificate2? loadCertificate(string path, bool add)
         {
@@ -117,7 +144,7 @@ namespace NSL.StaticWebStorage.Utils
 
                 bool isDefaultCert = e.FullPath == DefaultCertPath;
 
-                isDefaultCert = CanDefault && isDefaultCert;
+                isDefaultCert = Configuration.CurrentValue.CanDefault && isDefaultCert;
 
                 var cert = loadCertificate(e.FullPath, !isDefaultCert);
 
@@ -193,6 +220,13 @@ namespace NSL.StaticWebStorage.Utils
             using var reader = new StreamReader(stream);
             return reader.ReadToEnd();
         }
+    }
+
+    public class CertificateConfigurationModel
+    {
+        public bool CanDefault { get; set; } = true;
+
+        public string CertStoragePath { get; set; } = "data/certs/";
     }
 
     public static class RouteExtensions

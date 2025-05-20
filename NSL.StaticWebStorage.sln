@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSL.StaticWebStorage", "NSL
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{9A50BA68-FA2D-493E-9CAA-A36248C9C3CF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSL.StaticWebStorage.Test", "NSL.StaticWebStorage.Test\NSL.StaticWebStorage.Test.csproj", "{7D91625F-7521-42FF-B34A-CF84453FECDC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,8 +23,15 @@ Global
 		{9A50BA68-FA2D-493E-9CAA-A36248C9C3CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9A50BA68-FA2D-493E-9CAA-A36248C9C3CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9A50BA68-FA2D-493E-9CAA-A36248C9C3CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D91625F-7521-42FF-B34A-CF84453FECDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D91625F-7521-42FF-B34A-CF84453FECDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D91625F-7521-42FF-B34A-CF84453FECDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D91625F-7521-42FF-B34A-CF84453FECDC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {581F9B66-4532-42EB-992F-E652D4393D05}
 	EndGlobalSection
 EndGlobal

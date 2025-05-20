@@ -11,12 +11,11 @@
     },
     "https": {
       "commandName": "Project",
-      "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:7169;http://localhost:5139"
+      "applicationUrl": "https://localhost:7169;http://localhost:5000"
     },
     "Profile 1": {
       "commandName": "Project",
