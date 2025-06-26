@@ -35,4 +35,8 @@
 	  <Folder Include="data\certs\" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\NSL.StaticWebStorage.Shared\NSL.StaticWebStorage.Shared.csproj" />
+	</ItemGroup>
+
 </Project>

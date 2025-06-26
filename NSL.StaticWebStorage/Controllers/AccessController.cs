@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NSL.StaticWebStorage.Models;
 using NSL.StaticWebStorage.Services;
+using NSL.StaticWebStorage.Shared.Models;
 using NSL.StaticWebStorage.Utils.Route;
 
 namespace NSL.StaticWebStorage.Controllers

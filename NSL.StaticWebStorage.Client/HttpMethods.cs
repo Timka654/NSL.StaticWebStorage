@@ -1,11 +1,12 @@
-﻿using NSL.StaticWebStorage.Models;
+﻿using NSL.StaticWebStorage.Shared;
+using NSL.StaticWebStorage.Shared.Models;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace NSL.StaticWebStorage.Test
+namespace NSL.StaticWebStorage.Client
 {
-    internal class HttpMethods
+    public class HttpMethods
     {
         #region Utils
 
@@ -109,12 +110,24 @@ namespace NSL.StaticWebStorage.Test
 
         #region Files
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="tokenCode"></param>
+        /// <param name="storageName"></param>
+        /// <param name="path"></param>
+        /// <param name="requestData"></param>
+        /// <param name="uploadType"><see cref="StorageUploadType"/></param>
+        /// <param name="overwrite"><see cref="StorageOverwriteType"/></param>
+        /// <returns></returns>
         public static async Task<HttpResponseMessage> UploadAsync(string? token
             , string? tokenCode
             , string? storageName
             , string? path
-            , string? uploadType
-            , Stream requestData)
+            , Stream requestData
+            , string? uploadType = StorageUploadType.None
+            , string? overwrite = StorageOverwriteType.None)
         {
             using var client = CreateClient(token, tokenCode);
 
@@ -128,7 +141,13 @@ namespace NSL.StaticWebStorage.Test
 
             var request = new HttpRequestMessage(HttpMethod.Post, url);
 
-            var content = new MultipartFormDataContent();   
+            if (uploadType != StorageUploadType.None)
+                request.Headers.Add("upload-type", uploadType);
+
+            if (overwrite != StorageOverwriteType.None)
+                request.Headers.Add("overwrite", overwrite);
+
+            var content = new MultipartFormDataContent();
 
             content.Add(new StreamContent(requestData), "file", "file");
 

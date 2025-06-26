@@ -1,4 +1,5 @@
-﻿using NSL.StaticWebStorage.Models;
+﻿using NSL.StaticWebStorage.Client;
+using NSL.StaticWebStorage.Shared.Models;
 
 namespace NSL.StaticWebStorage.Test
 {
@@ -151,7 +152,7 @@ namespace NSL.StaticWebStorage.Test
             Assert.That(shareAccessResponse.IsSuccessStatusCode, canShare ? Is.True : Is.False);
 
 
-            var uploadResponse = await HttpMethods.UploadAsync(token, code, storage, _p, default, new MemoryStream(filesContent));
+            var uploadResponse = await HttpMethods.UploadAsync(token, code, storage, _p, new MemoryStream(filesContent));
 
             Assert.That(uploadResponse.IsSuccessStatusCode, canUpload ? Is.True : Is.False);
 

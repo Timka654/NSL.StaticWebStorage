@@ -1,8 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NSL.StaticWebStorage.Services;
+using NSL.StaticWebStorage.Shared;
 using NSL.StaticWebStorage.Utils.Route;
+using System;
 using System.IO;
 using System.IO.Compression;
+using System.Runtime.Intrinsics.Arm;
+using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 
@@ -16,12 +20,36 @@ namespace NSL.StaticWebStorage.Controllers
         {
             storage = storage.Trim().ToLower();
 
-            var epath = Path.Combine("data", "storage", storage, path);
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+
+            var epath = Path.Combine(storageFullPath, path);
+
+            if (epath.IndexOf(storageFullPath) == -1)
+                return Forbid();
 
             if (!System.IO.File.Exists(epath))
                 return NotFound();
 
             return File(System.IO.File.OpenRead(epath), "application/octet-stream", Path.GetFileName(epath));
+        }
+
+        [TokenAccessFilter(downloadCheck: true)]
+        [HttpGet("/{storage}/hash/{*path}")]
+        public IActionResult Hash([FromRoute] string storage, [FromRoute] string path)
+        {
+            storage = storage.Trim().ToLower();
+
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+
+            var epath = Path.Combine(storageFullPath, $"{path}._sws__hash");
+
+            if (epath.IndexOf(storageFullPath) == -1)
+                return Forbid();
+
+            if (!System.IO.File.Exists(epath))
+                return NotFound();
+
+            return Ok(System.IO.File.ReadAllText(epath));
         }
 
         [TokenAccessFilter(uploadCheck: true)]
@@ -30,12 +58,18 @@ namespace NSL.StaticWebStorage.Controllers
         {
             storage = storage.Trim().ToLower();
 
-            var epath = Path.Combine("data", "storage", storage, path);
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+
+            var epath = Path.Combine(storageFullPath, path);
+
+            if (epath.IndexOf(storageFullPath) == -1)
+                return Forbid();
 
             if (!System.IO.File.Exists(epath))
                 return NotFound();
 
             System.IO.File.Delete(epath);
+            System.IO.File.Delete($"{epath}._sws__hash");
 
             return Ok();
         }
@@ -45,11 +79,17 @@ namespace NSL.StaticWebStorage.Controllers
         public async Task<IActionResult> Upload([FromRoute] string storage
             , [FromRoute] string path
             , [FromHeader(Name = "upload-type")] string? uploadType
+            , [FromHeader(Name = "overwrite")] string? overwrite
             , [FromForm] IFormFile file)
         {
             storage = storage.Trim().ToLower();
 
-            var fullUploadPath = Path.Combine("data", "storage", storage, path);
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+
+            var fullUploadPath = Path.Combine(storageFullPath, path);
+
+            var hasOverwrite = overwrite == StorageOverwriteType.Overwrite;
+            var hasSkipExists = overwrite == StorageOverwriteType.SkipExists;
 
             using var uf = file.OpenReadStream();
 
@@ -57,36 +97,60 @@ namespace NSL.StaticWebStorage.Controllers
             {
                 var ufi = new FileInfo(fullUploadPath);
 
-                if (!ufi.Directory.Exists)
-                    ufi.Directory.Create();
+                if (ufi.FullName.IndexOf(storageFullPath) == -1)
+                    return Forbid();
 
-                using var f = ufi.Create();
+                if (!ufi.Exists || (ufi.Exists && hasOverwrite) || (ufi.Exists && !hasSkipExists))
+                {
+                    if (!ufi.Directory.Exists)
+                        ufi.Directory.Create();
 
-                await uf.CopyToAsync(f);
+                    using var f = ufi.Create();
+
+                    await uf.CopyToAsync(f);
+
+                    f.Position = 0; // reset position after copy
+                    await System.IO.File.WriteAllTextAsync($"{ufi.FullName}._sws__hash",
+                        string.Join("", SHA256.HashData(f).Select(x => x.ToString("x2"))));
+                }
+
+                return Ok(Enumerable.Repeat(Path.GetRelativePath(storageFullPath, fullUploadPath), 1));
             }
-            else if (uploadType == "extract")
+            else if (uploadType == StorageUploadType.Extract)
             {
                 using ZipArchive za = new ZipArchive(uf, ZipArchiveMode.Read);
+
+                var list = new List<string>();
 
                 foreach (var f in za.Entries)
                 {
                     if (string.IsNullOrEmpty(f.Name)) //folder
                         continue;
 
-                    var filePath = Path.Combine(fullUploadPath, f.FullName);
+                    var ufi = new FileInfo(Path.Combine(fullUploadPath, f.FullName));
 
-                    var dirPath = Path.GetDirectoryName(filePath);
+                    if (ufi.FullName.IndexOf(storageFullPath) == -1)
+                        return Forbid();
 
-                    if (!Directory.Exists(dirPath))
-                        Directory.CreateDirectory(dirPath);
+                    list.Add(Path.GetRelativePath(storageFullPath, ufi.FullName));
 
-                    f.ExtractToFile(filePath, true);
+                    if (!ufi.Exists || (ufi.Exists && hasOverwrite) || (ufi.Exists && !hasSkipExists))
+                    {
+                        if (!ufi.Directory.Exists)
+                            ufi.Directory.Create();
+
+                        f.ExtractToFile(ufi.FullName, hasOverwrite);
+
+                        using var fileStream = ufi.OpenRead();
+                        await System.IO.File.WriteAllTextAsync($"{ufi.FullName}._sws__hash",
+                            string.Join("", SHA256.HashData(fileStream).Select(x => x.ToString("x2"))));
+                    }
+
+                    return Ok(list);
                 }
             }
-            else
-                return BadRequest($"invalid upload type - {uploadType}");
 
-            return Ok();
+            return BadRequest($"invalid upload type - '{uploadType}'");
         }
     }
 }

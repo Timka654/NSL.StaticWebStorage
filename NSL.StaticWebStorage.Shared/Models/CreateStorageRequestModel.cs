@@ -1,4 +1,4 @@
-﻿namespace NSL.StaticWebStorage.Models
+﻿namespace NSL.StaticWebStorage.Shared.Models
 {
     public class CreateStorageRequestModel
     {

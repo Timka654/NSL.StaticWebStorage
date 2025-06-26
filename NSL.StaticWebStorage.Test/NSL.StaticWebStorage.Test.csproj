@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NSL.StaticWebStorage\NSL.StaticWebStorage.csproj" />
+    <ProjectReference Include="..\NSL.StaticWebStorage.Client\NSL.StaticWebStorage.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
