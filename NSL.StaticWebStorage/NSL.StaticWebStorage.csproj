@@ -4,13 +4,22 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<IsPackable>false</IsPackable>
 		<UserSecretsId>aa760138-5f85-4139-a74b-20987c1646e7</UserSecretsId>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<DockerComposeProjectPath>..\docker-compose.dcproj</DockerComposeProjectPath>
+
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+
+		<Version>$(VersionSuffix)</Version>
+		<Authors>Relife87</Authors>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Include="Properties\PublishProfiles\doreg.mtvworld.net.pubxml.user" />
+		<None Include="Properties\PublishProfiles\doreg.mtvworld.net.pubxml.user" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -32,11 +41,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="data\certs\" />
+		<Folder Include="data\certs\" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\NSL.StaticWebStorage.Shared\NSL.StaticWebStorage.Shared.csproj" />
+		<ProjectReference Include="..\NSL.StaticWebStorage.Shared\NSL.StaticWebStorage.Shared.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NSL.StaticWebStorage.Services;
+using System;
 using System.Text.RegularExpressions;
 
 namespace NSL.StaticWebStorage.Models
@@ -20,7 +21,7 @@ namespace NSL.StaticWebStorage.Models
         public DateTime? Expired { get; set; } = null;
 
         public string StorageOwner { get; set; }
-        
+
         public string? PathOwner { get; set; }
 
 
@@ -33,9 +34,12 @@ namespace NSL.StaticWebStorage.Models
         public bool CheckCode(string code)
         {
             if (IsExpired())
+            {
+                _removeAction();
                 return false;
+            }
 
-            if (Code != default && !string.Equals(Code,code))
+            if (Code != default && !string.Equals(Code, code))
                 return false;
 
             return true;
@@ -46,19 +50,7 @@ namespace NSL.StaticWebStorage.Models
             if (!CanUpload)
                 return false;
 
-            if (IsExpired())
-                return false;
-
-            if (!CheckCode(code))
-                return false;
-
-            if (!CanStorage(storage))
-                return false;
-
-            if (!CanPath(path))
-                return false;
-
-            return true;
+            return CheckBaseAccess(path, storage, code);
         }
 
         public bool CheckDownloadAccess(string path, string storage, string code)
@@ -66,19 +58,7 @@ namespace NSL.StaticWebStorage.Models
             if (!CanDownload)
                 return false;
 
-            if (IsExpired())
-                return false;
-
-            if (!CheckCode(code))
-                return false;
-
-            if (!CanStorage(storage))
-                return false;
-
-            if (!CanPath(path))
-                return false;
-
-            return true;
+            return CheckBaseAccess(path, storage, code);
         }
 
         public bool CheckShareAccess(string path, string storage, string code)
@@ -86,8 +66,16 @@ namespace NSL.StaticWebStorage.Models
             if (!CanShareAccess)
                 return false;
 
+            return CheckBaseAccess(path, storage, code);
+        }
+
+        private bool CheckBaseAccess(string path, string storage, string code)
+        {
             if (IsExpired())
+            {
+                _removeAction();
                 return false;
+            }
 
             if (!CheckCode(code))
                 return false;
@@ -100,5 +88,14 @@ namespace NSL.StaticWebStorage.Models
 
             return true;
         }
+
+        private Action _removeAction = ()=> { };
+
+        public StorageTokenModel SetRemoveDelegate(Action removeAction)
+        {
+            _removeAction = removeAction;
+            return this;
+        }
+
     }
 }

@@ -47,7 +47,10 @@ namespace NSL.StaticWebStorage.Services
 
                 return new()
                 {
-                    Token = JsonSerializer.Deserialize<StorageTokenModel>(File.ReadAllText(epath), JsonSerializerOptions.Web)
+                    Token = JsonSerializer.Deserialize<StorageTokenModel>(File.ReadAllText(epath), JsonSerializerOptions.Web).SetRemoveDelegate(() =>
+                    {
+                        TryRemoveToken(token);
+                    })
                 };
             });
 
@@ -67,8 +70,8 @@ namespace NSL.StaticWebStorage.Services
 
             if (File.Exists(epath))
             {
-                storage.TryRemove(token, out _);
                 File.Delete(epath);
+                storage.TryRemove(token, out _);
             }
 
             return true;
