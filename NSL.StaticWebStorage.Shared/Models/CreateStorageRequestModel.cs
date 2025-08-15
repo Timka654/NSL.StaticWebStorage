@@ -5,5 +5,7 @@
         public string? Id { get; set; }
 
         public bool Shared { get; set; }
+
+        public bool AcmeCert { get; set; }
     }
 }

@@ -2,9 +2,12 @@
 using Microsoft.Extensions.Options;
 using NSL.ASPNET.Attributes;
 using NSL.StaticWebStorage.Models;
+using NSL.StaticWebStorage.Shared.Models;
 using NSL.StaticWebStorage.Utils;
 using NSL.WCS.Client;
+using NSL.WCS.Shared.Models;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Text.Json;
 
 namespace NSL.StaticWebStorage.Services
@@ -14,9 +17,9 @@ namespace NSL.StaticWebStorage.Services
     {
         WCSDockerClient? wcs => serviceProvider.GetService<WCSDockerClient>();
 
-        IOptions<WCSClientConfiguration> wcsConfiguration => serviceProvider.GetService<IOptions<WCSClientConfiguration>>()!;
+        IOptionsMonitor<WCSClientConfiguration> wcsConfiguration => serviceProvider.GetService<IOptionsMonitor<WCSClientConfiguration>>()!;
 
-        string StoragePath = "data/storages";
+        public const string StoragePath = "data/storages";
 
         private ConcurrentDictionary<string, TempStorageData> storage = new ConcurrentDictionary<string, TempStorageData>();
 
@@ -56,9 +59,9 @@ namespace NSL.StaticWebStorage.Services
             return TryGetStorage(id) != null;
         }
 
-        public async Task<bool> CreateStorageAsync(string id, bool shared)
+        public async Task<bool> CreateStorageAsync(CreateStorageRequestModel storage)
         {
-            var epath = Path.Combine(StoragePath, id);
+            var epath = Path.Combine(StoragePath, storage.Id);
 
             if (Directory.Exists(epath))
                 return false;
@@ -66,14 +69,30 @@ namespace NSL.StaticWebStorage.Services
             Directory.CreateDirectory(epath);
 
             await File.WriteAllTextAsync($"{epath}.meta"
-                , JsonSerializer.Serialize(new StorageMetaDataModel { Shared = shared }, JsonSerializerOptions.Web)
+                , JsonSerializer.Serialize(new StorageMetaDataModel
+                {
+                    Id = storage.Id,
+                    Shared = storage.Shared,
+                    AcmeCert = storage.AcmeCert
+                }, JsonSerializerOptions.Web)
                 , CancellationToken.None);
 
             if (Configuration.Model == StaticStorageModelEnum.Domains && wcs != null && wcsConfiguration != null)
             {
                 await wcs.StopAsync(CancellationToken.None);
 
-                wcsConfiguration.Value.Routes = wcsConfiguration.Value.Routes.Append(id.ToProxyRoute()).ToArray();
+                wcsConfiguration.CurrentValue.Routes = wcsConfiguration.CurrentValue.Routes.Append(new WCS.Shared.Models.ProxyRouteDataModel()
+                {
+                    ACMECert = storage.AcmeCert,
+                    MatchHosts = [storage.Id],
+                    Name = storage.Id,
+                    Destinations = new List<ProxyRouteDestinationDataModel>() {
+                            new ProxyRouteDestinationDataModel() {
+                                Name = storage.Id,
+                                Address = Configuration.EndPoint
+                            }
+                        }
+                }).ToArray();
 
                 await wcs.StartAsync(CancellationToken.None);
             }

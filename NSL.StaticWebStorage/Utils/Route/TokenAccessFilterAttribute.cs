@@ -27,14 +27,16 @@ namespace NSL.StaticWebStorage.Utils.Route
                 isSharedStorage = s.Shared;
             }
 
-            if (context.HttpContext.Request.Headers.TryGetValue("token", out var _token))
-                _token = _token.First().ToLower();
+            if (context.HttpContext.Request.Headers.TryGetValue("token", out var _htoken))
+                _htoken = _htoken.First().ToLower();
+            else if (context.RouteData.Values.TryGetValue("token", out var _rtoken))
+                _htoken = (string)_rtoken;
 
             context.HttpContext.Request.Headers.TryGetValue("token_code", out var _code);
 
             var tokenService = context.HttpContext.RequestServices.GetRequiredService<MasterTokensService>();
 
-            var token = tokenService.TryGetToken(_token);
+            var token = tokenService.TryGetToken(_htoken);
 
             context.RouteData.Values.TryGetValue("path", out var path);
 

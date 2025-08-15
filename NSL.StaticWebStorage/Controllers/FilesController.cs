@@ -14,13 +14,39 @@ namespace NSL.StaticWebStorage.Controllers
 {
     public class FilesController(StoragesService storagesService) : ControllerBase
     {
-        [TokenAccessFilter(downloadCheck: true)]
-        [HttpGet("/{storage}/download/{*path}")]
-        public IActionResult Download([FromRoute] string storage, [FromRoute] string path)
+        [TokenAccessFilter(uploadCheck: true)]
+        [HttpGet("/__sws_api/{storage}/catalog/{*path}")]
+        public IActionResult Catalog([FromRoute] string storage, [FromRoute] string path = ".")
         {
             storage = storage.Trim().ToLower();
 
-            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storages", storage));
+
+            var epath = Path.Combine(storageFullPath, path);
+
+            if (epath.IndexOf(storageFullPath) == -1)
+                return Forbid();
+
+            var directory = new DirectoryInfo(epath);
+
+            if (!directory.Exists)
+                return Ok(Array.Empty<object>());
+
+            var dirs = directory.GetDirectories("*", SearchOption.TopDirectoryOnly);
+
+            var files = directory.GetDirectories("!*._sws__*", SearchOption.TopDirectoryOnly);
+
+            return Ok(dirs.Select(x => x.Name).Concat(files.Select(x => x.Name)));
+        }
+
+        [TokenAccessFilter(downloadCheck: true)]
+        [HttpGet("/__sws_api/{storage}/download/{token}/{*path}")]
+        [HttpGet("/__sws_api/{storage}/download/{*path}")]
+        public IActionResult Download([FromRoute] string storage, [FromRoute] string token, [FromRoute] string path = ".")
+        {
+            storage = storage.Trim().ToLower();
+
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storages", storage));
 
             var epath = Path.Combine(storageFullPath, path);
 
@@ -34,12 +60,12 @@ namespace NSL.StaticWebStorage.Controllers
         }
 
         [TokenAccessFilter(downloadCheck: true)]
-        [HttpGet("/{storage}/hash/{*path}")]
-        public IActionResult Hash([FromRoute] string storage, [FromRoute] string path)
+        [HttpGet("/__sws_api/{storage}/hash/{*path}")]
+        public IActionResult Hash([FromRoute] string storage, [FromRoute] string path = ".")
         {
             storage = storage.Trim().ToLower();
 
-            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storages", storage));
 
             var epath = Path.Combine(storageFullPath, $"{path}._sws__hash");
 
@@ -53,12 +79,12 @@ namespace NSL.StaticWebStorage.Controllers
         }
 
         [TokenAccessFilter(uploadCheck: true)]
-        [HttpPost("/{storage}/delete/{*path}")]
-        public IActionResult Delete([FromRoute] string storage, [FromRoute] string path)
+        [HttpPost("/__sws_api/{storage}/delete/{*path}")]
+        public IActionResult Delete([FromRoute] string storage, [FromRoute] string path = ".")
         {
             storage = storage.Trim().ToLower();
 
-            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storages", storage));
 
             var epath = Path.Combine(storageFullPath, path);
 
@@ -74,17 +100,21 @@ namespace NSL.StaticWebStorage.Controllers
             return Ok();
         }
 
+        [RequestSizeLimit(int.MaxValue)]
         [TokenAccessFilter(uploadCheck: true)]
-        [HttpPost("/{storage}/upload/{*path}")]
+        [HttpPost("/__sws_api/{storage}/upload/{*path}")]
         public async Task<IActionResult> Upload([FromRoute] string storage
-            , [FromRoute] string path
             , [FromHeader(Name = "upload-type")] string? uploadType
             , [FromHeader(Name = "overwrite")] string? overwrite
-            , [FromForm] IFormFile file)
+            , [FromForm] IFormFile file
+            , [FromRoute] string path = ".")
         {
+            if (file == null)
+                return BadRequest("required field \"file\" does not set");
+
             storage = storage.Trim().ToLower();
 
-            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storage", storage));
+            var storageFullPath = Path.GetFullPath(Path.Combine("data", "storages", storage));
 
             var fullUploadPath = Path.Combine(storageFullPath, path);
 
@@ -145,9 +175,9 @@ namespace NSL.StaticWebStorage.Controllers
                         await System.IO.File.WriteAllTextAsync($"{ufi.FullName}._sws__hash",
                             string.Join("", SHA256.HashData(fileStream).Select(x => x.ToString("x2"))));
                     }
-
-                    return Ok(list);
                 }
+
+                return Ok(list);
             }
 
             return BadRequest($"invalid upload type - '{uploadType}'");

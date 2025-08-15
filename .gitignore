@@ -4,3 +4,4 @@ obj/
 /NSL.StaticWebStorage/wwwroot/
 publish/
 *.user
+/NSL.StaticWebStorage/data/storages/

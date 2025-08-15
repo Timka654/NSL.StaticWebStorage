@@ -11,9 +11,10 @@ namespace NSL.StaticWebStorage.Client
         #region Utils
 
         static HttpClient CreateClient(string? token
-            , string? tokenCode)
+            , string? tokenCode
+            , string baseUrl)
         {
-            var client = new HttpClient() { BaseAddress = new Uri("http://localhost:5000") };
+            var client = new HttpClient() { BaseAddress = new Uri(baseUrl) };
 
             if (token != default)
                 client.DefaultRequestHeaders.Add("token", token);
@@ -35,14 +36,18 @@ namespace NSL.StaticWebStorage.Client
             return request;
         }
 
-        public static async Task<HttpResponseMessage> DevClearAsync()
-        {
-            using var client = CreateClient(default, default);
+#if DEBUG
 
-            var request = CreateJsonRequest("/dev/clear", default);
+        public static async Task<HttpResponseMessage> DevClearAsync(string baseUrl)
+        {
+            using var client = CreateClient(default, default, baseUrl);
+
+            var request = CreateJsonRequest("/__sws_api/dev/clear", default);
 
             return await client.SendAsync(request);
         }
+
+#endif
 
         #endregion
 
@@ -51,11 +56,12 @@ namespace NSL.StaticWebStorage.Client
         public static async Task<HttpResponseMessage> CreateStorageAsync(string? token
             , string? tokenCode
             , string id
-            , bool shared)
+            , bool shared
+            , string baseUrl)
         {
-            using var client = CreateClient(token, tokenCode);
+            using var client = CreateClient(token, tokenCode, baseUrl);
 
-            var request = CreateJsonRequest("/storage/create", new { id, shared });
+            var request = CreateJsonRequest("/__sws_api/storage/create", new { id, shared });
 
             return await client.SendAsync(request);
         }
@@ -68,9 +74,10 @@ namespace NSL.StaticWebStorage.Client
             , string? tokenCode
             , string? storageName
             , string? path
-            , CreateStorageTokenRequestModel requestData)
+            , CreateStorageTokenRequestModel requestData
+            , string baseUrl)
         {
-            using var client = CreateClient(token, tokenCode);
+            using var client = CreateClient(token, tokenCode, baseUrl);
 
             var url = "/access/share";
 
@@ -79,6 +86,8 @@ namespace NSL.StaticWebStorage.Client
 
             if (path != default)
                 url = $"{url}/{path}";
+
+            url = $"/__sws_api{url}";
 
             var request = CreateJsonRequest(url, requestData);
 
@@ -89,11 +98,12 @@ namespace NSL.StaticWebStorage.Client
             , string? tokenCode
             , string? storageName
             , string? path
-            , string recallToken)
+            , string recallToken
+            , string baseUrl)
         {
-            using var client = CreateClient(token, tokenCode);
+            using var client = CreateClient(token, tokenCode, baseUrl);
 
-            var url = "/access/recall";
+            var url = "/__sws_api/access/recall";
 
             if (storageName != default)
                 url = $"/{storageName}{url}";
@@ -126,10 +136,11 @@ namespace NSL.StaticWebStorage.Client
             , string? storageName
             , string? path
             , Stream requestData
+            , string baseUrl
             , string? uploadType = StorageUploadType.None
             , string? overwrite = StorageOverwriteType.None)
         {
-            using var client = CreateClient(token, tokenCode);
+            using var client = CreateClient(token, tokenCode, baseUrl);
 
             var url = "/upload";
 
@@ -137,6 +148,8 @@ namespace NSL.StaticWebStorage.Client
             url = $"/{storageName}{url}";
             //if (path != default)
             url = $"{url}/{path}";
+
+            url = $"/__sws_api{url}";
 
 
             var request = new HttpRequestMessage(HttpMethod.Post, url);
@@ -160,9 +173,10 @@ namespace NSL.StaticWebStorage.Client
         public static async Task<HttpResponseMessage> DeleteAsync(string? token
             , string? tokenCode
             , string? storageName
-            , string? path)
+            , string? path
+            , string baseUrl)
         {
-            using var client = CreateClient(token, tokenCode);
+            using var client = CreateClient(token, tokenCode, baseUrl);
 
             var url = "/delete";
 
@@ -172,6 +186,8 @@ namespace NSL.StaticWebStorage.Client
             //if (path != default)
             url = $"{url}/{path}";
 
+            url = $"/__sws_api{url}";
+
             var request = CreateJsonRequest(url, default);
 
             return await client.SendAsync(request);
@@ -180,9 +196,10 @@ namespace NSL.StaticWebStorage.Client
         public static async Task<HttpResponseMessage> DownloadAsync(string? token
             , string? tokenCode
             , string? storageName
-            , string? path)
+            , string? path
+            , string baseUrl)
         {
-            using var client = CreateClient(token, tokenCode);
+            using var client = CreateClient(token, tokenCode, baseUrl);
 
             var url = "/download";
 
@@ -191,6 +208,8 @@ namespace NSL.StaticWebStorage.Client
 
             //if (path != default)
             url = $"{url}/{path}";
+
+            url = $"/__sws_api{url}";
 
             var request = new HttpRequestMessage(HttpMethod.Get, url);
 

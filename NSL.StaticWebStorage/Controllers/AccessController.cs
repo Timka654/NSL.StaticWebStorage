@@ -9,7 +9,7 @@ namespace NSL.StaticWebStorage.Controllers
     [TokenAccessFilter(shareAccessCheck: true)]
     public class AccessController(MasterTokensService tokensService) : ControllerBase
     {
-        [HttpPost("/{storage}/access/share/{*path}")]
+        [HttpPost("/__sws_api/{storage}/access/share/{*path}")]
         public IActionResult Share([FromRoute] string storage, [FromRoute] string path, [FromBody] CreateStorageTokenRequestModel query)
         {
             storage = storage.Trim().ToLower();
@@ -54,7 +54,7 @@ namespace NSL.StaticWebStorage.Controllers
             });
         }
 
-        [HttpPost("/{storage}/access/share")]
+        [HttpPost("/__sws_api/{storage}/access/share")]
         public IActionResult Share([FromRoute] string storage, [FromBody] CreateStorageTokenRequestModel query)
         {
             storage = storage.Trim().ToLower();
@@ -96,7 +96,7 @@ namespace NSL.StaticWebStorage.Controllers
             });
         }
 
-        [HttpPost("/access/share")]
+        [HttpPost("/__sws_api/access/share")]
         public IActionResult Share([FromBody] CreateStorageTokenRequestModel query)
         {
             var tokenData = StorageTokenBuilder.Create()
@@ -133,7 +133,7 @@ namespace NSL.StaticWebStorage.Controllers
             });
         }
 
-        [HttpPost("/{storage}/access/recall/{*path}")]
+        [HttpPost("/__sws_api/{storage}/access/recall/{*path}")]
         public IActionResult Recall([FromRoute] string storage, [FromRoute] string path, [FromBody] string token)
         {
             storage = storage.Trim().ToLower();
@@ -152,7 +152,7 @@ namespace NSL.StaticWebStorage.Controllers
             return Ok();
         }
 
-        [HttpPost("/{storage}/access/recall")]
+        [HttpPost("/__sws_api/{storage}/access/recall")]
         public IActionResult Recall([FromRoute] string storage, [FromBody] string token)
         {
             storage = storage.Trim().ToLower();
@@ -170,7 +170,7 @@ namespace NSL.StaticWebStorage.Controllers
             return Ok();
         }
 
-        [HttpPost("/access/recall")]
+        [HttpPost("/__sws_api/access/recall")]
         public IActionResult Recall([FromBody] string token)
         {
             var tokenData = tokensService.TryGetToken(token);

@@ -8,12 +8,14 @@ namespace NSL.StaticWebStorage.Test
         [SetUp]
         public async Task Setup()
         {
-            var response = await HttpMethods.DevClearAsync();
+            var response = await HttpMethods.DevClearAsync(baseUrl);
 
             if (!response.IsSuccessStatusCode)
                 throw new Exception();
             Random.Shared.NextBytes(filesContent.AsSpan());
         }
+
+        const string baseUrl = "https://localhost:5000";
 
         const string masterToken = "08a516d0-f83b-4067-9827-defedfe5d6ca";
         const string masterTokenCode = "15bd8bbc-74da-4211-aba2-eaa7732103c1";
@@ -24,15 +26,15 @@ namespace NSL.StaticWebStorage.Test
         [Test, TestCase(false)]
         public async Task CreateSharedStorage(bool preventPass = false)
         {
-            var successResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, true);
+            var successResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, true, baseUrl);
 
             Assert.That(successResponse1.IsSuccessStatusCode, Is.True);
 
-            var failedResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, true);
+            var failedResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, true, baseUrl);
 
             Assert.That(failedResponse1.IsSuccessStatusCode, Is.False);
 
-            var failedResponse2 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, false);
+            var failedResponse2 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, false, baseUrl);
 
             Assert.That(failedResponse2.IsSuccessStatusCode, Is.False);
 
@@ -43,15 +45,15 @@ namespace NSL.StaticWebStorage.Test
         [Test, TestCase(false)]
         public async Task CreateNoSharedStorage(bool preventPass = false)
         {
-            var successResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, noSharedStorageName, false);
+            var successResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, noSharedStorageName, false, baseUrl);
 
             Assert.That(successResponse1.IsSuccessStatusCode, Is.True);
 
-            var failedResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, noSharedStorageName, true);
+            var failedResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, noSharedStorageName, true, baseUrl);
 
             Assert.That(failedResponse1.IsSuccessStatusCode, Is.False);
 
-            var failedResponse2 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, noSharedStorageName, false);
+            var failedResponse2 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, noSharedStorageName, false, baseUrl);
 
             Assert.That(failedResponse2.IsSuccessStatusCode, Is.False);
 
@@ -82,7 +84,7 @@ namespace NSL.StaticWebStorage.Test
                 CanShareAccess = false,
                 CanDownload = true,
                 CanUpload = true
-            });
+            }, baseUrl);
 
             Assert.That(shareResponse1.IsSuccessStatusCode, Is.True);
 
@@ -98,7 +100,7 @@ namespace NSL.StaticWebStorage.Test
                 CanShareAccess = true,
                 CanDownload = true,
                 CanUpload = false
-            });
+            }, baseUrl);
 
             Assert.That(shareResponse2.IsSuccessStatusCode, Is.True);
 
@@ -114,7 +116,7 @@ namespace NSL.StaticWebStorage.Test
                 CanShareAccess = true,
                 CanDownload = false,
                 CanUpload = true
-            });
+            }, baseUrl);
 
             Assert.That(shareResponse3.IsSuccessStatusCode, Is.True);
 
@@ -147,17 +149,17 @@ namespace NSL.StaticWebStorage.Test
                 CanShareAccess = true,
                 CanDownload = true,
                 CanUpload = true
-            });
+            }, baseUrl);
 
             Assert.That(shareAccessResponse.IsSuccessStatusCode, canShare ? Is.True : Is.False);
 
 
-            var uploadResponse = await HttpMethods.UploadAsync(token, code, storage, _p, new MemoryStream(filesContent));
+            var uploadResponse = await HttpMethods.UploadAsync(token, code, storage, _p, new MemoryStream(filesContent), baseUrl);
 
             Assert.That(uploadResponse.IsSuccessStatusCode, canUpload ? Is.True : Is.False);
 
 
-            var downloadResponse = await HttpMethods.DownloadAsync(token, code, storage, _p);
+            var downloadResponse = await HttpMethods.DownloadAsync(token, code, storage, _p, baseUrl);
 
             Assert.That(downloadResponse.IsSuccessStatusCode, canDownload ? Is.True : Is.False);
         }
@@ -165,7 +167,7 @@ namespace NSL.StaticWebStorage.Test
         [Test]
         public async Task CheckSharedAccess()
         {
-            var successResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, false);
+            var successResponse1 = await HttpMethods.CreateStorageAsync(masterToken, masterTokenCode, sharedStorageName, false, baseUrl);
 
             Assert.That(successResponse1.IsSuccessStatusCode, Is.True);
 
@@ -174,7 +176,7 @@ namespace NSL.StaticWebStorage.Test
                 CanShareAccess = false,
                 CanDownload = true,
                 CanUpload = true
-            });
+            }, baseUrl);
 
             Assert.Pass();
         }

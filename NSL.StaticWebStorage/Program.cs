@@ -10,6 +10,16 @@ using NSL.WCS.Shared.Models;
 using System.IO.Compression;
 using System.Text.Json;
 using NSL.ASPNET;
+using Microsoft.Extensions.DependencyInjection;
+using NSL.StaticWebStorage.Services;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Runtime.Intrinsics.X86;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.AspNetCore.Http.Features;
+using NSL.SocketCore;
+using NSL.HostOrchestrator.Client;
+using NSL.HostOrchestrator.Client.Metrics;
+using NSL.HostOrchestrator.Client.Logger;
 
 namespace NSL.StaticWebStorage
 {
@@ -20,7 +30,7 @@ namespace NSL.StaticWebStorage
 
         public static async Task Main(string[] args)
         {
-            appInstance = buildApplication(args);
+            appInstance = await buildApplication(args);
 
             runApplication(cts.Token);
 
@@ -68,7 +78,7 @@ namespace NSL.StaticWebStorage
             }
         }
 
-        static WebApplication buildApplication(string[] args)
+        static async Task<WebApplication> buildApplication(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -78,15 +88,11 @@ namespace NSL.StaticWebStorage
             if (args.Contains("development"))
                 builder.Configuration.AddJsonFile("appsettings.Development.json", optional: false, reloadOnChange: true);
             //#endif
+            builder.Logging.AddHOLogger();
 
-            builder.WebHost.ConfigureKestrel(options =>
-            {
-                options.ConfigureHttpsDefaults(httpsOptions =>
-                {
-                    //httpsOptions.SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13;
-                    httpsOptions.ServerCertificateSelector = CertificateStorage.GetOrLoad;
-                });
-            });
+            builder.Services.AddHOMetricsProvider();
+
+            builder.Services.AddDefaultNodeHOClient(builder.Configuration, true);
 
             var staticStorageConfiguration = builder.Configuration.GetRequiredSection("StaticStorage");
 
@@ -96,14 +102,55 @@ namespace NSL.StaticWebStorage
 
             if (staticStorageData?.WCS != null)
             {
-                builder.Services.Configure<WCSClientConfiguration>(c =>
+                builder.Services.Configure<WCSClientConfiguration>(staticStorageConfiguration.GetRequiredSection("WCS"));
+
+                builder.Services.AddWCSConfiguration(c =>
                 {
-                    c.ProjectName = staticStorageData.WCS.ProjectName;
-                    c.Host = staticStorageData.WCS.Host;
-                    c.Routes = staticStorageData.Model == StaticStorageModelEnum.Tokens ? staticStorageData.Domains.Select(x => x.ToProxyRoute()).ToArray() : [];
+                    c.Routes ??= Array.Empty<ProxyRouteDataModel>();
+
+                    if (staticStorageData.StaticConfiguration.WCSRoute)
+                    {
+                        foreach (var item in staticStorageData.StaticConfiguration.Domains)
+                        {
+                            c.Routes = c.Routes.Append(new ProxyRouteDataModel()
+                            {
+                                ACMECert = staticStorageData.StaticConfiguration.WCSAcme,
+                                Destinations = new List<ProxyRouteDestinationDataModel>() {
+                                    new ProxyRouteDestinationDataModel() {
+                                        Name = item,
+                                        Address = staticStorageData.EndPoint
+                                    }
+                            },
+                                MatchHosts = [item],
+                                Name = item
+                            }).ToArray();
+                        }
+                    }
+
+
+                    if (Directory.Exists(StoragesService.StoragePath))
+                    {
+                        foreach (var item in Directory.GetFiles(StoragesService.StoragePath, "*.meta"))
+                        {
+                            var data = JsonSerializer.Deserialize<StorageMetaDataModel>(File.ReadAllText(item), JsonSerializerOptions.Web);
+
+                            c.Routes = c.Routes.Append(new ProxyRouteDataModel()
+                            {
+                                ACMECert = data.AcmeCert,
+                                Destinations = new List<ProxyRouteDestinationDataModel>() {
+                                    new ProxyRouteDestinationDataModel() {
+                                        Name = data.Id,
+                                        Address = staticStorageData.EndPoint
+                                    }
+                            },
+                                MatchHosts = [data.Id],
+                                Name = data.Id
+                            }).ToArray();
+                        }
+                    }
                 });
 
-                builder.Services.AddWCSDockerClient(true);
+                builder.Services.AddWCSTcpClient(true);
             }
 
             builder.Services.AddControllers();
@@ -124,21 +171,49 @@ namespace NSL.StaticWebStorage
 
                 var ccts = cts = new CancellationTokenSource();
 
-                appInstance = buildApplication(args);
+                appInstance = await buildApplication(args);
 
                 cToken.Cancel();
             });
 
-            CertificateStorage.Load(app);
-
             if (storageOptions.CurrentValue?.WCS != null)
                 app.MapWCSHealthCheckRoute();
+
+            app.MapControllers();
 
             if (storageOptions.CurrentValue.Model == StaticStorageModelEnum.Domains)
                 app.UseMiddleware<DomainRoutingMiddleware>();
 
 
-            app.MapControllers();
+            var storagePath = Path.Combine(builder.Environment.ContentRootPath, "data", "storages");
+
+            if (!Directory.Exists(storagePath))
+                Directory.CreateDirectory(storagePath);
+
+            var fileProvider = new PhysicalFileProvider(storagePath);
+
+            app.UseDefaultFiles(new DefaultFilesOptions()
+            {
+                FileProvider = fileProvider,
+                DefaultFileNames = staticStorageData.StaticConfiguration.DefaultFiles ?? [],
+                RequestPath = "/storage"
+            });
+
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                FileProvider = fileProvider,
+                RequestPath = "/storage",
+                ServeUnknownFileTypes = true,
+                DefaultContentType = staticStorageData.StaticConfiguration.DefaultFileMimeType ?? "application/octet-stream",
+                ContentTypeProvider = new FileExtensionContentTypeProvider(staticStorageData.StaticConfiguration.MimeTypes)
+            });
+
+            if (app.Services.GetService(typeof(HOClient)) != null)
+            {
+                await app.Services.LoadHOMetrics();
+                await app.Services.LoadHOLogger();
+            }
+
 
             return app;
         }

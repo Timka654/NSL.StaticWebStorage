@@ -9,7 +9,7 @@ namespace NSL.StaticWebStorage.Controllers
     [TokenAccessFilter(shareAccessCheck: true)]
     public class StorageController(StoragesService storagesService) : ControllerBase
     {
-        [HttpPost("/storage/create")]
+        [HttpPost("/__sws_api/storage/create")]
         public async Task<IActionResult> Create([FromBody] CreateStorageRequestModel storage)
         {
             if(storage.Id == default)
@@ -17,7 +17,7 @@ namespace NSL.StaticWebStorage.Controllers
 
             storage.Id = storage.Id.ToLower();
 
-            if (await storagesService.CreateStorageAsync(storage.Id, storage.Shared))
+            if (await storagesService.CreateStorageAsync(storage))
                 return Ok(storage.Id);
 
             return Conflict("Storage already exists");

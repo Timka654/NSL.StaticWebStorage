@@ -7,7 +7,7 @@ namespace NSL.StaticWebStorage.Controllers
 {
     public class DevController(StoragesService storagesService) : ControllerBase
     {
-        [HttpPost("/dev/clear")]
+        [HttpPost("/__sws_api/dev/clear")]
         public IActionResult Clear()
         {
             foreach (var item in Directory.GetDirectories("data"))

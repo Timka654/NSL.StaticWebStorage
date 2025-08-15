@@ -23,10 +23,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
-		<PackageReference Include="NSL.ASPNET" Version="2025.5.19.1745" />
-		<PackageReference Include="NSL.Utils" Version="2025.5.19.1745" />
-		<PackageReference Include="NSL.WCS.Client" Version="2025.1.25.1852" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+		<PackageReference Include="NSL.ASPNET" Version="2025.7.31" />
+		<PackageReference Include="NSL.HostOrchestrator.Client" Version="2025.7.5.2206" />
+		<PackageReference Include="NSL.Utils" Version="2025.7.31" />
+		<PackageReference Include="NSL.WCS.Client" Version="2025.7.4.2042" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -41,11 +42,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="data\certs\" />
+		<ProjectReference Include="..\NSL.StaticWebStorage.Shared\NSL.StaticWebStorage.Shared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\NSL.StaticWebStorage.Shared\NSL.StaticWebStorage.Shared.csproj" />
+	  <Folder Include="data\" />
 	</ItemGroup>
 
 </Project>
