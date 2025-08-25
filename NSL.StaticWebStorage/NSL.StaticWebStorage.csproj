@@ -18,35 +18,23 @@
 		<Authors>Relife87</Authors>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<None Include="Properties\PublishProfiles\doreg.mtvworld.net.pubxml.user" />
+	<ItemGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <Compile Remove="data\**" />
+	  <Content Remove="data\**" />
+	  <EmbeddedResource Remove="data\**" />
+	  <None Remove="data\**" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
 		<PackageReference Include="NSL.ASPNET" Version="2025.7.31" />
-		<PackageReference Include="NSL.HostOrchestrator.Client" Version="2025.7.5.2206" />
+		<PackageReference Include="NSL.HostOrchestrator.Client" Version="2025.8.17.1640" />
 		<PackageReference Include="NSL.Utils" Version="2025.7.31" />
 		<PackageReference Include="NSL.WCS.Client" Version="2025.7.4.2042" />
 	</ItemGroup>
-
-	<ItemGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<None Update="DockerRelease\.dockerignore">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<link>.dockerignore</link>
-		</None>
-		<None Update="DockerRelease\Dockerfile">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<link>Dockerfile</link>
-		</None>
-	</ItemGroup>
-
+	
 	<ItemGroup>
 		<ProjectReference Include="..\NSL.StaticWebStorage.Shared\NSL.StaticWebStorage.Shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="data\" />
 	</ItemGroup>
 
 </Project>

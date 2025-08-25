@@ -28,24 +28,27 @@ namespace NSL.StaticWebStorage
         static CancellationTokenSource cts = new CancellationTokenSource();
         static CancellationTokenSource appLockToken = new CancellationTokenSource();
 
-        public static async Task Main(string[] args)
-        {
-            appInstance = await buildApplication(args);
-
-            runApplication(cts.Token);
-
-            try
-            {
-                await Task.Delay(Timeout.Infinite, appLockToken.Token);
-            }
-            catch (TaskCanceledException) { }
-            catch (OperationCanceledException) { }
-            catch (Exception)
+        public static Task Main(string[] args)
+            => HOApplication.RunAsync(args, (c, s) => s.RegisterDefaultHOClient(c, b => b.RegisterDefaultLogger()
+            .RegisterDefaultMetrics(), true), async _app =>
             {
 
-                throw;
-            }
-        }
+                appInstance = await buildApplication(args, _app);
+
+                runApplication(cts.Token);
+
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, appLockToken.Token);
+                }
+                catch (TaskCanceledException) { }
+                catch (OperationCanceledException) { }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+            });
 
         static WebApplication appInstance;
 
@@ -78,9 +81,11 @@ namespace NSL.StaticWebStorage
             }
         }
 
-        static async Task<WebApplication> buildApplication(string[] args)
+        static async Task<WebApplication> buildApplication(string[] args, HOApplication _app)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            _app.Configure(builder.Services);
 
             //#if RELEASE
             builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
@@ -88,11 +93,6 @@ namespace NSL.StaticWebStorage
             if (args.Contains("development"))
                 builder.Configuration.AddJsonFile("appsettings.Development.json", optional: false, reloadOnChange: true);
             //#endif
-            builder.Logging.AddHOLogger();
-
-            builder.Services.AddHOMetricsProvider();
-
-            builder.Services.AddDefaultNodeHOClient(builder.Configuration, true);
 
             var staticStorageConfiguration = builder.Configuration.GetRequiredSection("StaticStorage");
 
@@ -159,6 +159,12 @@ namespace NSL.StaticWebStorage
 
             var app = builder.Build();
 
+            app.Use(async (r,n)=> {
+
+                r.Request.EnableBuffering();
+                await n();
+            });
+
             var storageOptions = app.Services.GetRequiredService<IOptionsMonitor<StaticStorageConfigurationModel>>();
 
             IDisposable? changeEvent = default;
@@ -171,7 +177,7 @@ namespace NSL.StaticWebStorage
 
                 var ccts = cts = new CancellationTokenSource();
 
-                appInstance = await buildApplication(args);
+                appInstance = await buildApplication(args, _app);
 
                 cToken.Cancel();
             });
@@ -192,27 +198,21 @@ namespace NSL.StaticWebStorage
 
             var fileProvider = new PhysicalFileProvider(storagePath);
 
-            app.UseDefaultFiles(new DefaultFilesOptions()
-            {
-                FileProvider = fileProvider,
-                DefaultFileNames = staticStorageData.StaticConfiguration.DefaultFiles ?? [],
-                RequestPath = "/storage"
-            });
+            //app.UseDefaultFiles(new DefaultFilesOptions()
+            //{
+            //    FileProvider = fileProvider,
+            //    DefaultFileNames = staticStorageData.StaticConfiguration.DefaultFiles ?? [],
+            //    RequestPath = "/storage",
+            //});
 
             app.UseStaticFiles(new StaticFileOptions()
             {
                 FileProvider = fileProvider,
-                RequestPath = "/storage",
+                RequestPath = "/data/storages",
                 ServeUnknownFileTypes = true,
                 DefaultContentType = staticStorageData.StaticConfiguration.DefaultFileMimeType ?? "application/octet-stream",
                 ContentTypeProvider = new FileExtensionContentTypeProvider(staticStorageData.StaticConfiguration.MimeTypes)
             });
-
-            if (app.Services.GetService(typeof(HOClient)) != null)
-            {
-                await app.Services.LoadHOMetrics();
-                await app.Services.LoadHOLogger();
-            }
 
 
             return app;

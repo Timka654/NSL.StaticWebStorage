@@ -13,7 +13,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["NSL.StaticWebStorage/NSL.StaticWebStorage.csproj", "NSL.StaticWebStorage/"]
-RUN dotnet nuget add source "https://nuget.twicepricegroup.com/api/Package/2774c084-9ffe-4f42-9fe0-db62dd642c91-0a0620dc-ba53-4d87-8640-30cc27968db6-7f3e440b-c431-40b5-96c7-9eb5de23af48/v3/index.json" -n "Relife87"
+RUN dotnet nuget add source "https://nuget.mtvworld.net/api/Package/2774c084-9ffe-4f42-9fe0-db62dd642c91-0a0620dc-ba53-4d87-8640-30cc27968db6-7f3e440b-c431-40b5-96c7-9eb5de23af48/v3/index.json" -n "Relife87"
 RUN dotnet restore "./NSL.StaticWebStorage/NSL.StaticWebStorage.csproj"
 COPY . .
 WORKDIR "/src/NSL.StaticWebStorage"

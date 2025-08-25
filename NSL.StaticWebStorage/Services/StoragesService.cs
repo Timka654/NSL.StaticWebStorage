@@ -13,7 +13,9 @@ using System.Text.Json;
 namespace NSL.StaticWebStorage.Services
 {
     [RegisterService(ServiceLifetime.Singleton)]
-    public class StoragesService(IOptionsMonitor<StaticStorageConfigurationModel> configurationOptions, IServiceProvider serviceProvider)
+    public class StoragesService(IOptionsMonitor<StaticStorageConfigurationModel> configurationOptions
+        , IServiceProvider serviceProvider
+        , ILogger<StoragesService> logger)
     {
         WCSDockerClient? wcs => serviceProvider.GetService<WCSDockerClient>();
 
@@ -31,14 +33,15 @@ namespace NSL.StaticWebStorage.Services
 
             var info = storage.GetOrAdd(id, id =>
             {
-                var epath = StoragePath;
-
-                epath = Path.Combine(epath, $"{id}.meta");
+                var epath = Path.Combine(StoragePath, $"{id}.meta");
 
                 if (!File.Exists(epath))
                 {
+                    logger.LogWarning("Storage metadata file not found: {Path}", epath);
                     return new();
                 }
+
+                logger.LogInformation("Loading storage metadata from file: {Path}", epath);
 
                 return new()
                 {
@@ -63,19 +66,21 @@ namespace NSL.StaticWebStorage.Services
         {
             var epath = Path.Combine(StoragePath, storage.Id);
 
-            if (Directory.Exists(epath))
-                return false;
+            if (!Directory.Exists(epath))
+                Directory.CreateDirectory(epath);
 
-            Directory.CreateDirectory(epath);
+            var data = new StorageMetaDataModel
+            {
+                Id = storage.Id,
+                Shared = storage.Shared,
+                AcmeCert = storage.AcmeCert
+            };
 
             await File.WriteAllTextAsync($"{epath}.meta"
-                , JsonSerializer.Serialize(new StorageMetaDataModel
-                {
-                    Id = storage.Id,
-                    Shared = storage.Shared,
-                    AcmeCert = storage.AcmeCert
-                }, JsonSerializerOptions.Web)
+                , JsonSerializer.Serialize(data, JsonSerializerOptions.Web)
                 , CancellationToken.None);
+
+            this.storage[storage.Id] = new TempStorageData() { Storage = data };
 
             if (Configuration.Model == StaticStorageModelEnum.Domains && wcs != null && wcsConfiguration != null)
             {

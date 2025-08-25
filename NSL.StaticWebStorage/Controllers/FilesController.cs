@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using NSL.StaticWebStorage.Services;
 using NSL.StaticWebStorage.Shared;
 using NSL.StaticWebStorage.Utils.Route;
@@ -100,6 +101,19 @@ namespace NSL.StaticWebStorage.Controllers
             return Ok();
         }
 
+        //[TokenAccessFilter(uploadCheck: true)]
+        //[HttpPost("/__sws_api/{storage}/start_upload/{*path}")]
+        //public async Task<IActionResult> StartUpload([FromRoute] string storage
+        //    , [FromHeader(Name = "upload-type")] string? uploadType
+        //    , [FromHeader(Name = "overwrite")] string? overwrite
+        //    , [FromForm] IFormFile file
+        //    , [FromRoute] string path = ".")
+        //{
+        //}
+
+
+
+        [RequestFormLimits(MultipartBodyLengthLimit = int.MaxValue)]
         [RequestSizeLimit(int.MaxValue)]
         [TokenAccessFilter(uploadCheck: true)]
         [HttpPost("/__sws_api/{storage}/upload/{*path}")]
